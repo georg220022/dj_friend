@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: web
+    build:
+      context: dj_friend/
+      dockerfile: Dockerfile
+    command:
+      bash -c "python3 manage.py migrate && python3 manage.py test user.tests.test_friend -v 2 && python3 manage.py runserver 0:8000"
+    restart:
+      always
+    ports:
+      - 8000:8000
+    volumes:
+      - storage_data:/app/storage
+    depends_on:
+      postgres_db_friend:
+        condition: service_healthy
+
+  postgres_db_friend:
+    container_name: postgres_db_friend
+    image: postgres:15.1-alpine
+    volumes:
+      - type: tmpfs
+        target: /var/lib/postgresql/data
+    restart:
+      always
+    env_file:
+      dj_friend/.env
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+
+volumes:
+  storage_data:
